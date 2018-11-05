@@ -8,8 +8,8 @@ const spawn = require('child_process').spawn;
 var express = require('express');
 var multer = require('multer');
 var request = require('request');
-var http = require('http');
 var qs = require('querystring');
+var bodyParser = require('body-parser');
 
 // Configure Multer
 const multerConfig = {
@@ -31,6 +31,7 @@ var upload = multer(multerConfig).single('pyfile')
 // Set up app
 var app = express();
 app.set('view engine','ejs');
+app.use(bodyParser.urlencoded( {extended: true}));
 
 
 // Routing
@@ -54,6 +55,8 @@ app.get('/maprisk_req', function(req, res) {
 
 app.post('/maprisk_api', function(req, res, next) {
 	console.log(' ==> MapRisk API Called')
+	// console.log(req.body.user_address);
+	console.log(" ======================================== ");
 
 	var options = {
 		uri: 'http://staging.maprisk.com/reports',
@@ -62,30 +65,32 @@ app.post('/maprisk_api', function(req, res, next) {
 		},
 		qs: {
 			'reportList': 'floodRiskScore',
-			'addressLine': '817 Southwest 12 Street, Fort Lauderdale, FL 33315'
+			'addressLine': req.body.user_address
 		},
 		method: 'GET'
 	};
 
-	console.log(options);
+	// console.log(options);
 
 	function callback(error, response, body) {
   		if (!error && response.statusCode == 200) {
-		    var info = JSON.parse(body);
-			
-			var v1 = null;
-			var v2 = null;
-			var v3 = null;
-			// console.log(info);
-			// console.log(info.urllink);
-			Object.entries(info)[2].forEach((el) => {
-				let v1 = el[0];
-				let v2 = el[1];
-				let v3 = el[2];
-			});
+			var resp = JSON.parse(body);
+			var params = resp['request'];
+			var data = resp['response']['reportResults'];
+		
+			/*
+			// Tests For Data Access
+			console.log(params['poi']);
+			console.log(" ==================== ");
+			console.log(data['floodRiskScore']);
+			*/
 
-			console.log(v1);
-			console.log(v2);
+			var score = "The geocoded address is " 
+				+ params['poi']['street']
+				+ " and the 100 yr flood depth is: "
+				+ data['floodRiskScore']['waterDepth100Year'];
+
+			console.log(score);
 		
 		}
   		else {
